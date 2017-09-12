@@ -13,13 +13,6 @@
 
 use std::fmt;
 
-/// The highest value that can be specified for a single color channel.
-/// Note: this may only be relevant for EtherDream.
-pub const COLOR_MAX : u16 = 65535;
-
-/// Same as `COLOR_MAX`, but as a single-precision floating point number.
-pub const COLOR_MAX_F : f32 = 65535.0;
-
 /// Core point type.
 /// Supports position (x, y), color (r, g, b), and an is_blank flag.
 #[derive(Clone, Copy, Debug, Default)]
@@ -29,11 +22,11 @@ pub struct SimplePoint {
   /// Y-coordinate.
   pub y: i16,
   /// Red color value.
-  pub r: u16,
+  pub r: u8,
   /// Green color value.
-  pub g: u16,
+  pub g: u8,
   /// Blue color value.
-  pub b: u16,
+  pub b: u8,
   /// Whether the point is semantically considered a "blanking" point.
   /// A blanking point may still encode color information, but we generally do
   /// not render these points unless we're debugging.
@@ -61,9 +54,15 @@ pub struct PipelinePoint {
 }
 
 impl SimplePoint {
+  /// Minimum value of the color channels.
+  pub const MIN_COLOR : u8 = 0;
+
+  /// Maximum value of the color channels.
+  pub const MAX_COLOR : u8 = 255;
+
   /// SimplePoint CTOR.
   /// Lets you specify colors for each channel separately.
-  pub fn xy_rgb(x: i16, y: i16, r: u16, g: u16, b: u16) -> SimplePoint {
+  pub fn xy_rgb(x: i16, y: i16, r: u8, g: u8, b: u8) -> SimplePoint {
     SimplePoint {
       x: x,
       y: y,
@@ -103,7 +102,7 @@ impl SimplePoint {
 
   /// SimplePoint CTOR.
   /// Uses the same intensity value for all color channels.
-  pub fn xy_luma(x: i16, y: i16, luminance: u16) -> SimplePoint {
+  pub fn xy_luma(x: i16, y: i16, luminance: u8) -> SimplePoint {
     SimplePoint {
       x: x,
       y: y,
@@ -116,7 +115,7 @@ impl SimplePoint {
 
   /// SimplePoint CTOR.
   /// Sets only the red color channel.
-  pub fn xy_red(x: i16, y: i16, red: u16) -> SimplePoint {
+  pub fn xy_red(x: i16, y: i16, red: u8) -> SimplePoint {
     SimplePoint {
       x: x,
       y: y,
@@ -129,7 +128,7 @@ impl SimplePoint {
 
   /// SimplePoint CTOR.
   /// Sets only the green color channel.
-  pub fn xy_green(x: i16, y: i16, green: u16) -> SimplePoint {
+  pub fn xy_green(x: i16, y: i16, green: u8) -> SimplePoint {
     SimplePoint {
       x: x,
       y: y,
@@ -142,7 +141,7 @@ impl SimplePoint {
 
   /// SimplePoint CTOR.
   /// Sets only the blue color channel.
-  pub fn xy_blue(x: i16, y: i16, blue: u16) -> SimplePoint {
+  pub fn xy_blue(x: i16, y: i16, blue: u8) -> SimplePoint {
     SimplePoint {
       x: x,
       y: y,
@@ -157,12 +156,18 @@ impl SimplePoint {
   /// If set to on, the lasers are at full power. Otherwise, they're off.
   /// An "off" point is *not* considered a blanking point.
   pub fn xy_binary(x: i16, y: i16, on: bool) -> SimplePoint {
-    let c = if on { COLOR_MAX } else { 0 };
+    let c = if on { Self::MAX_COLOR } else { 0 };
     SimplePoint::xy_rgb(x, y, c, c, c)
   }
 }
 
 impl PipelinePoint {
+  /// Minimum value of the color channels.
+  pub const MIN_COLOR : f32 = 0.0;
+
+  /// Maximum value of the color channels.
+  pub const MAX_COLOR : f32 = 255.0;
+
   /// PipelinePoint CTOR.
   /// Lets you specify colors for each channel separately.
   pub fn xy_rgb(x: f32, y: f32, r: f32, g: f32, b: f32) -> PipelinePoint {
@@ -196,9 +201,9 @@ impl PipelinePoint {
     SimplePoint {
       x: self.x as i16,
       y: self.y as i16,
-      r: self.r as u16,
-      g: self.g as u16,
-      b: self.b as u16,
+      r: self.r as u8,
+      g: self.g as u8,
+      b: self.b as u8,
       is_blank: self.is_blank,
     }
   }
@@ -259,7 +264,7 @@ impl PipelinePoint {
   /// If set to on, the lasers are at full power. Otherwise, they're off.
   /// An "off" point is *not* considered a blanking point.
   pub fn xy_binary(x: f32, y: f32, on: bool) -> PipelinePoint {
-    let c = if on { COLOR_MAX_F } else { 0.0 };
+    let c = if on { Self::MAX_COLOR } else { 0.0 };
     PipelinePoint::xy_rgb(x, y, c, c, c)
   }
 }
@@ -282,12 +287,12 @@ mod tests {
 
   #[test]
   fn test_simplepoint_xy_rgb() {
-    let pt = SimplePoint::xy_rgb(100, -100, 1, 200, 300);
+    let pt = SimplePoint::xy_rgb(100, -100, 1, 200, 123);
     assert_eq!(100, pt.x);
     assert_eq!(-100, pt.y);
     assert_eq!(1, pt.r);
     assert_eq!(200, pt.g);
-    assert_eq!(300, pt.b);
+    assert_eq!(123, pt.b);
     assert_eq!(false, pt.is_blank);
   }
 
@@ -304,19 +309,22 @@ mod tests {
 
   #[test]
   fn test_simplepoint_into_pipeline_pt() {
-    let sp = SimplePoint::xy_rgb(100, -100, 1, 200, 300);
+    let sp = SimplePoint::xy_rgb(100, -100, 1, 200, 234);
     let pp = sp.into_pipeline_pt();
     assert_eq!(100.0, pp.x);
     assert_eq!(-100.0, pp.y);
     assert_eq!(1.0, pp.r);
     assert_eq!(200.0, pp.g);
-    assert_eq!(300.0, pp.b);
+    assert_eq!(234.0, pp.b);
     assert_eq!(false, pp.is_blank);
 
     let sp = SimplePoint::xy_blank(-9_001, 10_000);
     let pp = sp.into_pipeline_pt();
     assert_eq!(-9001.0, pp.x);
     assert_eq!(10_000.0, pp.y);
+    assert_eq!(0.0, pp.r);
+    assert_eq!(0.0, pp.g);
+    assert_eq!(0.0, pp.b);
     assert_eq!(true, pp.is_blank);
   }
 
@@ -333,10 +341,10 @@ mod tests {
 
   #[test]
   fn test_simplepoint_xy_red() {
-    let pt = SimplePoint::xy_red(10, 20, 1000);
+    let pt = SimplePoint::xy_red(10, 20, 100);
     assert_eq!(10, pt.x);
     assert_eq!(20, pt.y);
-    assert_eq!(1000, pt.r);
+    assert_eq!(100, pt.r);
     assert_eq!(0, pt.g);
     assert_eq!(0, pt.b);
     assert_eq!(false, pt.is_blank);
@@ -355,12 +363,12 @@ mod tests {
 
   #[test]
   fn test_simplepoint_xy_blue() {
-    let pt = SimplePoint::xy_blue(10, 20, 2000);
+    let pt = SimplePoint::xy_blue(10, 20, 200);
     assert_eq!(10, pt.x);
     assert_eq!(20, pt.y);
     assert_eq!(0, pt.r);
     assert_eq!(0, pt.g);
-    assert_eq!(2000, pt.b);
+    assert_eq!(200, pt.b);
     assert_eq!(false, pt.is_blank);
   }
 
@@ -377,20 +385,20 @@ mod tests {
     let pt = SimplePoint::xy_binary(8000, -9001, true);
     assert_eq!(8000, pt.x);
     assert_eq!(-9001, pt.y);
-    assert_eq!(65535, pt.r);
-    assert_eq!(65535, pt.g);
-    assert_eq!(65535, pt.b);
+    assert_eq!(255, pt.r);
+    assert_eq!(255, pt.g);
+    assert_eq!(255, pt.b);
     assert_eq!(false, pt.is_blank);
   }
 
   #[test]
   fn test_pipelinepoint_xy_rgb() {
-    let pt = PipelinePoint::xy_rgb(100.0, -100.0, 1.0, 200.0, 300.0);
+    let pt = PipelinePoint::xy_rgb(100.0, -100.0, 1.0, 200.0, 220.0);
     assert_eq!(100.0, pt.x);
     assert_eq!(-100.0, pt.y);
     assert_eq!(1.0, pt.r);
     assert_eq!(200.0, pt.g);
-    assert_eq!(300.0, pt.b);
+    assert_eq!(220.0, pt.b);
     assert_eq!(false, pt.is_blank);
   }
 
@@ -407,19 +415,22 @@ mod tests {
 
   #[test]
   fn test_pipelinepoint_into_simple_pt() {
-    let pp = PipelinePoint::xy_rgb(100.0, -100.0, 1.0, 200.0, 300.0);
+    let pp = PipelinePoint::xy_rgb(100.0, -100.0, 1.0, 200.0, 240.0);
     let sp= pp.into_simple_pt();
     assert_eq!(100, sp.x);
     assert_eq!(-100, sp.y);
     assert_eq!(1, sp.r);
     assert_eq!(200, sp.g);
-    assert_eq!(300, sp.b);
+    assert_eq!(240, sp.b);
     assert_eq!(false, sp.is_blank);
 
     let pp = PipelinePoint::xy_blank(-9_001.0, 10_000.0);
     let sp= pp.into_simple_pt();
     assert_eq!(-9001, sp.x);
     assert_eq!(10_000, sp.y);
+    assert_eq!(0, sp.r);
+    assert_eq!(0, sp.g);
+    assert_eq!(0, sp.b);
     assert_eq!(true, sp.is_blank);
   }
 
@@ -436,10 +447,10 @@ mod tests {
 
   #[test]
   fn test_pipelinepoint_xy_red() {
-    let pt = PipelinePoint::xy_red(10.0, 20.0, 1000.0);
+    let pt = PipelinePoint::xy_red(10.0, 20.0, 100.0);
     assert_eq!(10.0, pt.x);
     assert_eq!(20.0, pt.y);
-    assert_eq!(1000.0, pt.r);
+    assert_eq!(100.0, pt.r);
     assert_eq!(0.0, pt.g);
     assert_eq!(0.0, pt.b);
     assert_eq!(false, pt.is_blank);
@@ -458,12 +469,12 @@ mod tests {
 
   #[test]
   fn test_pipelinepoint_xy_blue() {
-    let pt = PipelinePoint::xy_blue(10.0, 20.0, 2000.0);
+    let pt = PipelinePoint::xy_blue(10.0, 20.0, 200.0);
     assert_eq!(10.0, pt.x);
     assert_eq!(20.0, pt.y);
     assert_eq!(0.0, pt.r);
     assert_eq!(0.0, pt.g);
-    assert_eq!(2000.0, pt.b);
+    assert_eq!(200.0, pt.b);
     assert_eq!(false, pt.is_blank);
   }
 
@@ -480,9 +491,9 @@ mod tests {
     let pt = PipelinePoint::xy_binary(8000.0, -9001.0, true);
     assert_eq!(8000.0, pt.x);
     assert_eq!(-9001.0, pt.y);
-    assert_eq!(65535.0, pt.r);
-    assert_eq!(65535.0, pt.g);
-    assert_eq!(65535.0, pt.b);
+    assert_eq!(255.0, pt.r);
+    assert_eq!(255.0, pt.g);
+    assert_eq!(255.0, pt.b);
     assert_eq!(false, pt.is_blank);
   }
 
@@ -500,17 +511,4 @@ mod tests {
       assert_eq!(n, convert(n));
     }
   }
-
-  #[test]
-  fn single_precision_is_sufficient_for_u16() {
-    // I assume the compiler doesn't optimize this away.
-    fn convert(n: u16) -> u16 { (n as f32) as u16 }
-
-    assert_eq!(u16::max_value(), convert(u16::max_value()));
-
-    for n in u16::min_value() .. u16::max_value() {
-      assert_eq!(n, convert(n));
-    }
-  }
 }
-
