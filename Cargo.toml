@@ -1,6 +1,6 @@
 [package]
   name = "point"
-  version = "0.3.0"
+  version = "0.3.1"
   authors = [ "Brandon Thomas <bt@brand.io>", "Brandon Thomas <echelon@gmail.com>" ]
   description = "Core point types for various laser projection libraries to use."
   keywords = [ "laser", "projector", "DAC", "hardware" ]

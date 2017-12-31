@@ -1,6 +1,6 @@
 // Copyright (c) 2017 Brandon Thomas <bt@brand.io>, <echelon@gmail.com>
 
-//! Beam.rs is a library that defines the core Point types for various laser
+//! Point.rs is a library that defines the core Point types for various laser
 //! projection libraries. This standardization makes it easier for library
 //! interop and prevents expensive and unwieldy type conversion.
 
